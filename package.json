@@ -16,6 +16,13 @@
   ],
   "author": "Xu Yiming",
   "license": "MIT",
+  "publishConfig": {
+    "registry": "https://registry.npmjs.org/"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/xuyimingwork/html-external-script-query-webpack-plugin.git"
+  },
   "dependencies": {
     "parse5": "^7.3.0",
     "whatwg-url": "^14.2.0"
