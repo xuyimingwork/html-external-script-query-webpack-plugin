@@ -1,6 +1,6 @@
 {
   "name": "html-external-script-query-webpack-plugin",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "add query content to webpack html external script's src",
   "main": "index.js",
   "files": [

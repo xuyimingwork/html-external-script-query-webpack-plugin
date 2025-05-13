@@ -8,9 +8,10 @@ const WEBPACK_PLUGIN_NAME = 'HtmlExternalScriptQueryWebpackPlugin'
 
 const plugin = class {
   constructor(options) {
+    const TIMESTAMP_INSTANTIATION = new Date().getTime()
     const userOptions = options || {}
     const defaultOptions = {
-      queryCreator: ({ src }) => ({ _t: new Date().getTime() })
+      queryCreator: ({ src }) => ({ _t: TIMESTAMP_INSTANTIATION })
     }
     this.options = Object.assign(defaultOptions, userOptions)
   }
