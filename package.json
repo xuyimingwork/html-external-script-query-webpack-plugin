@@ -1,0 +1,23 @@
+{
+  "name": "html-external-script-query-webpack-plugin",
+  "version": "1.0.0",
+  "description": "add query content to webpack html external script's src",
+  "main": "index.js",
+  "files": [
+    "index.js"
+  ],
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "webpack",
+    "webpack-plugin",
+    "html-webpack-plugin"
+  ],
+  "author": "Xu Yiming",
+  "license": "MIT",
+  "dependencies": {
+    "parse5": "^7.3.0",
+    "whatwg-url": "^14.2.0"
+  }
+}
