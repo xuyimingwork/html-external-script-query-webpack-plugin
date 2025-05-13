@@ -1,13 +1,14 @@
 {
   "name": "html-external-script-query-webpack-plugin",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "add query content to webpack html external script's src",
-  "main": "index.js",
+  "main": "./dist/index.js",
   "files": [
-    "index.js"
+    "dist"
   ],
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "prepublish": "pnpm run build",
+    "build": "esbuild --outdir=dist --target=node8 src/index.js"
   },
   "keywords": [
     "webpack",
@@ -26,5 +27,8 @@
   "dependencies": {
     "parse5": "^7.3.0",
     "whatwg-url": "^14.2.0"
+  },
+  "devDependencies": {
+    "esbuild": "^0.25.4"
   }
 }
