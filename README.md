@@ -13,6 +13,8 @@ to
 ```
 
 - Only worked in html-webpack-plugin's template
+- support webpack 3 & 4 & 5
+- support HtmlWebpackPlugin 3 & 4 & 5
 
 ## install
 

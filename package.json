@@ -1,6 +1,6 @@
 {
   "name": "html-external-script-query-webpack-plugin",
-  "version": "1.0.2",
+  "version": "1.1.0",
   "description": "add query content to webpack html external script's src",
   "main": "./dist/index.js",
   "files": [
@@ -25,6 +25,7 @@
     "url": "git+https://github.com/xuyimingwork/html-external-script-query-webpack-plugin.git"
   },
   "dependencies": {
+    "debug": "^4.4.1",
     "parse5": "^7.3.0",
     "whatwg-url": "^14.2.0"
   },

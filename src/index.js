@@ -1,8 +1,8 @@
 // @ts-check
 'use strict';
-
 const parse5 = require('parse5');
 const URL = require('whatwg-url').URL
+const debug = require('debug')('html-external-script-query-webpack-plugin')
 
 const WEBPACK_PLUGIN_NAME = 'HtmlExternalScriptQueryWebpackPlugin'
 
@@ -11,37 +11,43 @@ const plugin = class {
     const TIMESTAMP_INSTANTIATION = new Date().getTime()
     const userOptions = options || {}
     const defaultOptions = {
+      debug: false,
       queryCreator: ({ src }) => ({ _t: TIMESTAMP_INSTANTIATION })
     }
     this.options = Object.assign(defaultOptions, userOptions)
+    debug.enabled = !!this.options.debug
+    debug('init')
   }
 
   apply(compiler) {
-    getHtmlWebpackPluginBeforeEmitHook(compiler)
-      .then(hook => {
-        tapAsyncOnHook(hook, (data, cb) => {
-          const document = parse5.parse(data.html)
-          traverse(document, node => {
-            // 不是 script 标签
-            if (node.tagName !== 'script') return
-            // script 标签内存在内容
-            if (Array.isArray(node.childNodes) && node.childNodes.length && node.childNodes.some(item => item.nodeName === '#text')) return
-            // script 标签无 src
-            const attr = node.attrs.find(attr => attr.name === 'src' && !!attr.value)
-            if (!attr) return
-            const queryCreator = this.options.queryCreator
-            if (typeof queryCreator !== 'function') return
-            const query = queryCreator({ src: attr.value })
-            attr.value += patch(attr.value, query)
-          })
-          data.html = parse5.serialize(document)
-          cb(null, data);
-        })
-      })
+    debug('apply')
+    const HtmlWebpackPlugin = getHtmlWebpackPlugin(compiler)
+    if (!HtmlWebpackPlugin) {
+      debug('end: HtmlWebpackPlugin not found')
+      return
+    }
+
+    const cb = (data, cb) => {
+      debug('transform start')
+      data.html = transform(data.html, { queryCreator: this.options.queryCreator })
+      debug('transform done')
+      cb(null, data)
+    }
+
+    if (compiler.hooks) {
+      // webpack 4 & 5 support
+      setupHtmlWebpackPlugin(cb, compiler, HtmlWebpackPlugin)
+    } else {
+      // webpack 3 support
+      compiler.plugin('compilation', function (compilation) {
+        compilation.plugin('html-webpack-plugin-after-html-processing', cb);
+      });
+    }
   }
 }
 
 function patch(src, patch) {
+  if (!patch || !Object.keys(patch).length) return ''
   const url = new URL(src, 'https://placeholder.local')
   if (!url) return ''
   const searchParams = url.searchParams
@@ -60,23 +66,45 @@ function traverse(node, cb) {
   node.childNodes.forEach(node => traverse(node, cb))
 }
 
-function tapAsyncOnHook(hook, cb) {
-  if (!hook || typeof hook.tapAsync !== 'function') return
-  if (typeof cb !== 'function') return
-  hook.tapAsync(WEBPACK_PLUGIN_NAME, cb)
+function transform(html, { queryCreator }) {
+  if (typeof queryCreator !== 'function') return html
+  debug('transform parse')
+  const document = parse5.parse(html)
+  let count = 0
+  traverse(document, node => {
+    // 不是 script 标签
+    if (node.tagName !== 'script') return
+    // script 标签内存在内容
+    if (Array.isArray(node.childNodes) && node.childNodes.length && node.childNodes.some(item => item.nodeName === '#text')) return
+    // script 标签无 src
+    const attr = node.attrs.find(attr => attr.name === 'src' && !!attr.value)
+    if (!attr) return
+    const query = queryCreator({ src: attr.value })
+    const patchQuery = patch(attr.value, query)
+    if (patchQuery) {
+      count++
+      debug('transform script %o patch %o', attr.value, patchQuery)
+    }
+    attr.value += patchQuery
+  })
+  debug('transform script count %o', count)
+  debug('transform serialize')
+  return parse5.serialize(document)
 }
 
-function getHtmlWebpackPluginBeforeEmitHook(compiler) {
-  const HtmlWebpackPlugin = getHtmlWebpackPlugin(compiler)
-  if (!HtmlWebpackPlugin) return Promise.resolve()
-  // html-webpack-plugin v5 / v4
-  const getCompilationHooks = HtmlWebpackPlugin.getCompilationHooks || HtmlWebpackPlugin.getHooks
-  if (typeof getCompilationHooks !== 'function') return Promise.resolve()
-  return new Promise((resolve) => {
-    compiler.hooks.compilation.tap(WEBPACK_PLUGIN_NAME, (compilation) => {
+function setupHtmlWebpackPlugin(cb, compiler, HtmlWebpackPlugin) {
+  if (typeof cb !== 'function') return
+  compiler.hooks.compilation.tap(WEBPACK_PLUGIN_NAME, (compilation) => {
+    const getCompilationHooks = HtmlWebpackPlugin.getCompilationHooks || HtmlWebpackPlugin.getHooks
+    if (getCompilationHooks) {
+      // HtmlWebpackPlugin 4 & 5
       const hook = getCompilationHooks(compilation).beforeEmit
-      return resolve(hook)
-    })
+      if (!hook || typeof hook.tapAsync !== 'function') return
+      hook.tapAsync(WEBPACK_PLUGIN_NAME, cb)
+    } else if (compilation.hooks.htmlWebpackPluginAfterHtmlProcessing) {
+      // HtmlWebpackPlugin 3.x
+      compilation.hooks.htmlWebpackPluginAfterHtmlProcessing.tapAsync(WEBPACK_PLUGIN_NAME, cb) 
+    }
   })
 }
 
