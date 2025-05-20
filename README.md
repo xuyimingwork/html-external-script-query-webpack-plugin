@@ -12,9 +12,9 @@ to
 <script src="https://cdn.jsdelivr.net/npm/jquery@3/dist/jquery.min.js?_t=1747118972970"></script>
 ```
 
+- Also change matched preload link's href
 - Only worked in html-webpack-plugin's template
-- support webpack 3 & 4 & 5
-- support HtmlWebpackPlugin 3 & 4 & 5
+- Support webpack 3 & 4 & 5 and HtmlWebpackPlugin 3 & 4 & 5
 
 ## install
 

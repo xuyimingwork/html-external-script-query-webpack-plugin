@@ -66,11 +66,8 @@ function traverse(node, cb) {
   node.childNodes.forEach(node => traverse(node, cb))
 }
 
-function transform(html, { queryCreator }) {
-  if (typeof queryCreator !== 'function') return html
-  debug('transform parse')
-  const document = parse5.parse(html)
-  let count = 0
+function getTransformInput(document, { queryCreator }) {
+  const result = []
   traverse(document, node => {
     // 不是 script 标签
     if (node.tagName !== 'script') return
@@ -81,13 +78,52 @@ function transform(html, { queryCreator }) {
     if (!attr) return
     const query = queryCreator({ src: attr.value })
     const patchQuery = patch(attr.value, query)
-    if (patchQuery) {
-      count++
-      debug('transform script %o patch %o', attr.value, patchQuery)
-    }
-    attr.value += patchQuery
+    if (!patchQuery) return
+    result.push({ node, attr, patchQuery })
   })
-  debug('transform script count %o', count)
+  return result
+}
+
+// 需要
+function processTransform(document, target) {
+  if (!Array.isArray(target) || !target.length) return
+
+  target = target.map((item) => {
+    return { 
+      ...item,
+      preloads: [],
+    }
+  })
+
+  // 处理预加载内容 <link href="/static/js/main.js" rel="preload" as="script">
+  // 可能存在多次预加载？可能没有预加载
+  traverse(document, node => {
+    if (node.tagName !== 'link') return
+    const isPreload = !!node.attrs.find(attr => attr.name === 'rel' && attr.value === 'preload')
+    if (!isPreload) return
+    const attr = node.attrs.find(attr => attr.name === 'href' && !!attr.value)
+    if (!attr) return
+    const item = target.find(item => item.attr.value === attr.value)
+    if (!item) return
+    item.preloads.push({ node, attr })
+  }) 
+  
+  target.forEach(({ attr, patchQuery, preloads }) => {
+    const src = attr.value + patchQuery
+    const origin = attr.value
+    attr.value = src
+    preloads.forEach(({ attr }) => attr.value = src)
+    debug('transform script %o patch %o preload %d', origin, patchQuery, preloads.length)
+  })
+}
+
+function transform(html, { queryCreator }) {
+  if (typeof queryCreator !== 'function') return html
+  debug('transform parse')
+  const document = parse5.parse(html)
+  const targets = getTransformInput(document, { queryCreator })
+  processTransform(document, targets)
+  debug('transform script count %o', targets.length)
   debug('transform serialize')
   return parse5.serialize(document)
 }
